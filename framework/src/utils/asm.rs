@@ -1,3 +1,5 @@
+use core::arch::asm;
+
 #[inline]
 pub fn cpuid() {
     unsafe {

@@ -9,7 +9,7 @@ const DIRECTORY_PAGES: usize = 2; // Dedicate 2 pages to the directory.
 const BYTE_SIZE: usize = DIRECTORY_PAGES * PAGE_SIZE;
 
 /// Directory header for shared data.
-#[repr(packed, C)]
+//#[repr(packed, C)]
 pub struct DirectoryHeader {
     entries: AtomicUsize,
     // Used to signal that snapshotting is in progress.
@@ -18,7 +18,7 @@ pub struct DirectoryHeader {
     length: usize,
 }
 
-#[repr(packed, C)]
+//#[repr(packed, C)]
 pub struct DirectoryEntry {
     pub name: [u8; MAX_LEN],
 }
@@ -81,9 +81,7 @@ impl Directory {
     pub fn end_snapshot(&mut self) {
         unsafe {
             let version = (*self.head).current_version.load(Ordering::Acquire);
-            (*self.head)
-                .committed_version
-                .store(version, Ordering::Release);
+            (*self.head).committed_version.store(version, Ordering::Release);
         }
     }
 }

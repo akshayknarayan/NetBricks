@@ -1,8 +1,8 @@
 use super::{Executable, Scheduler};
 use common::*;
 use std::default::Default;
-use std::sync::Arc;
 use std::sync::mpsc::{sync_channel, Receiver, RecvError, SyncSender};
+use std::sync::Arc;
 use std::thread;
 use utils;
 
@@ -16,14 +16,14 @@ struct Runnable {
 impl Runnable {
     pub fn from_task<T: Executable + 'static>(task: T) -> Runnable {
         Runnable {
-            task: box task,
+            task: Box::new(task),
             cycles: 0,
             last_run: utils::rdtsc_unsafe(),
         }
     }
     pub fn from_boxed_task(task: Box<Executable>) -> Runnable {
         Runnable {
-            task: task,
+            task,
             cycles: 0,
             last_run: utils::rdtsc_unsafe(),
         }

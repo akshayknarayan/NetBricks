@@ -1,7 +1,7 @@
-use super::Batch;
 use super::act::Act;
 use super::iterator::{BatchIterator, PacketDescriptor};
 use super::packet_batch::PacketBatch;
+use super::Batch;
 use common::*;
 use headers::EndOffset;
 use headers::NullHeader;
@@ -19,7 +19,7 @@ impl CompositionBatch {
         parent: V,
     ) -> CompositionBatch {
         CompositionBatch {
-            parent: box parent.reset(),
+            parent: Box::new(parent.reset()),
         }
     }
 }
@@ -43,7 +43,7 @@ impl BatchIterator for CompositionBatch {
 
 /// Internal interface for packets.
 impl Act for CompositionBatch {
-    act!{}
+    act! {}
 }
 
 impl Executable for CompositionBatch {
