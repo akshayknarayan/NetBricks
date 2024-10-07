@@ -40,7 +40,7 @@ macro_rules! act {
         }
 
         #[inline]
-        fn send_q(&mut self, port: &PacketTx) -> Result<u32> {
+        fn send_q(&mut self, port: &dyn PacketTx) -> Result<u32> {
             self.parent.send_q(port)
         }
 
@@ -68,5 +68,5 @@ macro_rules! act {
         fn get_task_dependencies(&self) -> Vec<usize> {
             self.parent.get_task_dependencies()
         }
-    }
+    };
 }
