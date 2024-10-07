@@ -59,17 +59,17 @@ impl NetbricksConfiguration {
 
 impl fmt::Display for NetbricksConfiguration {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        try!(write!(
+        r#try!(write!(
             f,
             "Configuration: name: {} mempool size: {} core cache: {} primary core: {}\n Ports:\n",
             self.name, self.pool_size, self.cache_size, self.primary_core
         ));
         for port in &self.ports {
-            try!(write!(f, "\t{}\n", port))
+            r#try!(write!(f, "\t{}\n", port))
         }
-        try!(write!(f, "Cores:\n"));
+        r#try!(write!(f, "Cores:\n"));
         for core in &self.cores {
-            try!(write!(f, "\t{}\n", core))
+            r#try!(write!(f, "\t{}\n", core))
         }
         if let Some(ref arg) = self.dpdk_args {
             write!(f, "DPDK Args: {}\n", arg)?

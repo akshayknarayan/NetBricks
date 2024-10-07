@@ -1,10 +1,10 @@
 use super::Batch;
 use super::act::Act;
 use super::iterator::{BatchIterator, PacketDescriptor};
-use common::*;
-use headers::NullHeader;
-use interface::*;
-use native::zcsi::*;
+use crate::common::*;
+use crate::headers::NullHeader;
+use crate::interface::*;
+use crate::native::zcsi::*;
 use std::result;
 
 /// Base packet batch structure, this represents an array of mbufs and is the primary interface for sending and
@@ -257,7 +257,7 @@ impl Act for PacketBatch {
         while self.available() > 0 {
             unsafe {
                 // let available = self.available() as i32;
-                try!(port.send(self.packet_ptr()).and_then(|sent| {
+                r#try!(port.send(self.packet_ptr()).and_then(|sent| {
                     self.consume_batch_partial(sent as usize);
                     total_sent += sent;
                     Ok(sent)

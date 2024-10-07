@@ -1,8 +1,8 @@
-use common::*;
-use state::RingBuffer;
+use crate::common::*;
+use crate::state::RingBuffer;
 use std::cmp::{max, min};
 use std::u16;
-use utils::*;
+use crate::utils::*;
 
 /// Results from inserting into `ReorderedBuffer`
 pub enum InsertionResult {
@@ -327,7 +327,7 @@ impl ReorderedBuffer {
     /// latter should be adjusted to reflect the expected number of out-of-order segments at a time.
     pub fn new_with_segments(buffer_size: usize, segment_size: usize) -> Result<ReorderedBuffer> {
         let rounded_bytes = round_to_power_of_2(buffer_size);
-        let ring_buffer = try!{RingBuffer::new(rounded_bytes)};
+        let ring_buffer = r#try!{RingBuffer::new(rounded_bytes)};
         Ok(ReorderedBuffer {
             data: ring_buffer,
             buffer_size: rounded_bytes,
