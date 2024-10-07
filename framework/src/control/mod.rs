@@ -5,8 +5,6 @@ pub use self::epoll::*;
 #[path = "linux/epoll.rs"]
 mod epoll;
 pub mod tcp;
-#[cfg(feature = "sctp")]
-pub mod sctp;
 
 use std::os::unix::io::RawFd;
 

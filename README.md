@@ -50,13 +50,6 @@ Building NetBricks requires the following dependency packages (on Debian):
 apt-get install libgnutls30 libgnutls-openssl-dev libcurl4-gnutls-dev libnuma-dev libpcap-dev
 ```
 
-NetBricks also supports using SCTP as a control protocol. SCTP support requires the use of `libsctp` (this is an
-optional dependency) which can be installed on Debian using:
-
-```
-apt-get install libsctp-dev
-```
-
 Tuning
 ------
 Changing some Linux parameters, including disabling C-State, and P-State; and isolating CPUs can greatly benefit NF

@@ -111,18 +111,6 @@ toggle_symbols () {
     fi
 }
 
-find_sctp () {
-    set +o errexit
-    gcc -lsctp 2>&1 | grep "cannot find" >/dev/null
-    export SCTP_PRESENT=$?
-    set -o errexit
-    if [ ${SCTP_PRESENT} -eq 1 ]; then
-        echo "SCTP library found"
-    else
-        echo "No SCTP library found, install libsctp ('sudo apt-get install libsctp-dev' on debian)"
-    fi
-}
-
 native () {
     make -j $proc -C $BASE_DIR/native
     make -C $BASE_DIR/native install
@@ -259,9 +247,6 @@ case $TASK in
         unset NETBRICKS_SYMBOLS || true
         toggle_symbols
         ;;
-    sctp)
-        find_sctp
-        ;;
     build_test)
         shift
         if [ $# -lt 1 ]; then
@@ -283,13 +268,8 @@ case $TASK in
     build_fmwk)
         deps
         native
-        find_sctp
         pushd $BASE_DIR/framework
-        if [ ${SCTP_PRESENT} -eq 1 ]; then
-            ${CARGO} build --release --features "sctp"
-        else
-            ${CARGO} build --release
-        fi
+        ${CARGO} build --release
         popd
         ;;
     build)
@@ -297,28 +277,14 @@ case $TASK in
 
         native
 
-        find_sctp
-
         pushd $BASE_DIR/framework
-        if [ ${SCTP_PRESENT} -eq 1 ]; then
-            ${CARGO} build --release --features "sctp"
-        else
-            ${CARGO} build --release
-        fi
+        ${CARGO} build --release
         popd
 
         for example in ${examples[@]}; do
-            if [[ ${example} == *sctp* ]]; then
-                if [ ${SCTP_PRESENT} -eq 1 ]; then
-                    pushd ${BASE_DIR}/${example}
-                    ${CARGO} build --release
-                    popd
-                fi
-            else
-                pushd ${BASE_DIR}/${example}
-                ${CARGO} build --release
-                popd
-            fi
+            pushd ${BASE_DIR}/${example}
+            ${CARGO} build --release
+            popd
         done
         ;;
     create_container)
@@ -493,7 +459,6 @@ case $TASK in
 ./build.sh <Command>
       Where command is one of
           deps: Build dependencies
-          sctp: Check if sctp library is present.
           build: Build the project (this includes framework and all tests).
           build_fmwk: Just build framework.
           build_test: Build a particular test.
