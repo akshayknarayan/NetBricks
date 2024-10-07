@@ -41,11 +41,11 @@ pub fn acl_match<T: 'static + Batch<Header = NullHeader>>(parent: T, acls: Vec<A
     let mut flow_cache = HashSet::<Flow, FnvHash>::with_hasher(Default::default());
     parent
         .parse::<MacHeader>()
-        .transform(box move |p| {
+        .transform(Box::new(move |p| {
             p.get_mut_header().swap_addresses();
-        })
+        }))
         .parse::<IpHeader>()
-        .filter(box move |p| {
+        .filter(Box::new(move |p| {
             let flow = p.get_header().flow().unwrap();
             for acl in &acls {
                 if acl.matches(&flow, &flow_cache) {
@@ -56,6 +56,6 @@ pub fn acl_match<T: 'static + Batch<Header = NullHeader>>(parent: T, acls: Vec<A
                 }
             }
             return false;
-        })
+        }))
         .compose()
 }

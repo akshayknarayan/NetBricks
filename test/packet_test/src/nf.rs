@@ -9,16 +9,16 @@ pub fn delay<T: 'static + Batch<Header = NullHeader>>(parent: T) -> TransformBat
         addr: [0x68, 0x05, 0xca, 0x33, 0xfd, 0xc8],
     };
     m.set_etype(0x800);
-    parent.transform(box move |pkt| {
+    parent.transform(Box::new(move |pkt| {
         pkt.write_header(&m, 0).unwrap();
-    })
+    }))
     // parent.parse::<MacHeader>()
-    // .transform(box move |pkt| {
+    // .transform(Box::new( move |pkt| {
     // assert!(pkt.refcnt() == 1);
     // let mut hdr = pkt.get_mut_header();
     // /let src = hdr.src;
     // hdr.src[2] += 1;
     // hdr.dst[1] += 1;
     // delay_loop(delay);
-    // })
+    // }))
 }

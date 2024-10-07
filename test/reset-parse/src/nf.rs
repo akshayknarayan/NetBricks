@@ -4,11 +4,7 @@ use e2d2::operators::*;
 #[inline]
 fn lat() {
     unsafe {
-        asm!("nop"
-             :
-             :
-             :
-             : "volatile");
+        core::arch::x86_64::_mm_pause();
     }
 }
 
@@ -27,12 +23,12 @@ pub fn delay<T: 'static + Batch<Header = NullHeader>>(
 ) -> MapBatch<NullHeader, ResetParsingBatch<TransformBatch<MacHeader, ParsedBatch<MacHeader, T>>>> {
     parent
         .parse::<MacHeader>()
-        .transform(box move |pkt| {
+        .transform(Box::new(move |pkt| {
             assert!(pkt.refcnt() == 1);
             let hdr = pkt.get_mut_header();
             hdr.swap_addresses();
             delay_loop(delay);
-        })
+        }))
         .reset()
-        .map(box move |pkt| assert!(pkt.refcnt() == 1))
+        .map(Box::new(move |pkt| assert!(pkt.refcnt() == 1)))
 }

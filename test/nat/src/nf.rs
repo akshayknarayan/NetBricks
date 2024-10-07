@@ -8,19 +8,16 @@ use std::convert::From;
 use std::hash::BuildHasherDefault;
 use std::net::Ipv4Addr;
 
-#[derive(Clone, Default)]
-struct Unit;
 #[derive(Clone, Copy, Default)]
 struct FlowUsed {
     pub flow: Flow,
-    pub time: u64,
     pub used: bool,
 }
 
 type FnvHash = BuildHasherDefault<FnvHasher>;
 pub fn nat<T: 'static + Batch<Header = NullHeader>>(
     parent: T,
-    _s: &mut Scheduler,
+    _s: &mut dyn Scheduler,
     nat_ip: &Ipv4Addr,
 ) -> CompositionBatch {
     let ip = u32::from(*nat_ip);
@@ -29,7 +26,7 @@ pub fn nat<T: 'static + Batch<Header = NullHeader>>(
     let mut next_port = 1024;
     const MIN_PORT: u16 = 1024;
     const MAX_PORT: u16 = 65535;
-    let pipeline = parent.parse::<MacHeader>().transform(box move |pkt| {
+    let pipeline = parent.parse::<MacHeader>().transform(Box::new(move |pkt| {
         // let hdr = pkt.get_mut_header();
         let payload = pkt.get_mut_payload();
         if let Some(flow) = ipv4_extract_flow(payload) {
@@ -58,6 +55,6 @@ pub fn nat<T: 'static + Batch<Header = NullHeader>>(
                 }
             }
         }
-    });
+    }));
     pipeline.compose()
 }

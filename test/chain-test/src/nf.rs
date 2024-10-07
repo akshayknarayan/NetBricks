@@ -6,20 +6,20 @@ use e2d2::operators::*;
 pub fn chain_nf<T: 'static + Batch<Header = NullHeader, Metadata = EmptyMetadata>>(parent: T) -> CompositionBatch {
     parent
         .parse::<MacHeader>()
-        .transform(box move |pkt| {
+        .transform(Box::new(move |pkt| {
             let hdr = pkt.get_mut_header();
             hdr.swap_addresses();
-        })
+        }))
         .parse::<IpHeader>()
-        .transform(box |pkt| {
+        .transform(Box::new(|pkt| {
             let h = pkt.get_mut_header();
             let ttl = h.ttl();
             h.set_ttl(ttl - 1);
-        })
-        .filter(box |pkt| {
+        }))
+        .filter(Box::new(|pkt| {
             let h = pkt.get_header();
             h.ttl() != 0
-        })
+        }))
         .compose()
 }
 
@@ -36,10 +36,10 @@ pub fn chain<T: 'static + Batch<Header = NullHeader, Metadata = EmptyMetadata>>(
     if len % 2 == 0 || pos % 2 == 1 {
         chained
             .parse::<MacHeader>()
-            .transform(box move |pkt| {
+            .transform(Box::new(move |pkt| {
                 let hdr = pkt.get_mut_header();
                 hdr.swap_addresses();
-            })
+            }))
             .compose()
     } else {
         chained

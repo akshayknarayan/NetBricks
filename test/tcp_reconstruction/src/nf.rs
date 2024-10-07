@@ -4,8 +4,8 @@ use e2d2::scheduler::*;
 use e2d2::state::*;
 use e2d2::utils::Flow;
 use fnv::FnvHasher;
-use std::collections::HashMap;
 use std::collections::hash_map::Entry;
+use std::collections::HashMap;
 use std::hash::BuildHasherDefault;
 
 type FnvHash = BuildHasherDefault<FnvHasher>;
@@ -20,24 +20,24 @@ pub fn reconstruction<T: 'static + Batch<Header = NullHeader>, S: Scheduler + Si
     let mut read_buf: Vec<u8> = (0..PRINT_SIZE).map(|_| 0).collect();
     let mut groups = parent
         .parse::<MacHeader>()
-        .transform(box move |p| {
+        .transform(Box::new(move |p| {
             p.get_mut_header().swap_addresses();
-        })
+        }))
         .parse::<IpHeader>()
         .group_by(
             2,
-            box move |p| if p.get_header().protocol() == 6 { 0 } else { 1 },
+            Box::new(move |p| if p.get_header().protocol() == 6 { 0 } else { 1 }),
             sched,
         );
     let pipe = groups
         .get_group(0)
         .unwrap()
-        .metadata(box move |p| {
+        .metadata(Box::new(move |p| {
             let flow = p.get_header().flow().unwrap();
             flow
-        })
+        }))
         .parse::<TcpHeader>()
-        .transform(box move |p| {
+        .transform(Box::new(move |p| {
             if !p.get_header().psh_flag() {
                 let flow = p.read_metadata();
                 let seq = p.get_header().seq_num();
@@ -95,7 +95,7 @@ pub fn reconstruction<T: 'static + Batch<Header = NullHeader>, S: Scheduler + Si
                     },
                 }
             }
-        })
+        }))
         .compose();
     merge(vec![pipe, groups.get_group(1).unwrap().compose()]).compose()
 }

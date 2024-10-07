@@ -7,7 +7,7 @@ use headers::EndOffset;
 use interface::Packet;
 use interface::PacketTx;
 
-pub type FilterFn<T, M> = Box<FnMut(&Packet<T, M>) -> bool + Send>;
+pub type FilterFn<T, M> = Box<dyn FnMut(&Packet<T, M>) -> bool + Send>;
 
 pub struct FilterBatch<T, V>
 where
@@ -72,7 +72,7 @@ where
     }
 
     #[inline]
-    fn send_q(&mut self, port: &PacketTx) -> Result<u32> {
+    fn send_q(&mut self, port: &dyn PacketTx) -> Result<u32> {
         self.parent.send_q(port)
     }
 

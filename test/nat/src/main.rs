@@ -1,4 +1,3 @@
-#![feature(box_syntax)]
 extern crate e2d2;
 extern crate fnv;
 extern crate getopts;
@@ -15,10 +14,8 @@ use std::net::Ipv4Addr;
 use std::process;
 use std::sync::Arc;
 use std::thread;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 mod nf;
-
-const CONVERSION_FACTOR: f64 = 1000000000.;
 
 fn test<T, S>(ports: Vec<T>, sched: &mut S)
 where
@@ -29,13 +26,7 @@ where
 
     let mut pipelines: Vec<_> = ports
         .iter()
-        .map(|port| {
-            nat(
-                ReceiveBatch::new(port.clone()),
-                sched,
-                &Ipv4Addr::new(10, 0, 0, 1),
-            ).send(port.clone())
-        })
+        .map(|port| nat(ReceiveBatch::new(port.clone()), sched, &Ipv4Addr::new(10, 0, 0, 1)).send(port.clone()))
         .collect();
     println!("Running {} pipelines", pipelines.len());
     if pipelines.len() > 1 {
@@ -51,7 +42,7 @@ fn main() {
     let args: Vec<String> = env::args().collect();
     let matches = match opts.parse(&args[1..]) {
         Ok(m) => m,
-        Err(f) => panic!(f.to_string()),
+        Err(f) => panic!("{}", f.to_string()),
     };
     let configuration = read_matches(&matches, &opts);
 
@@ -62,12 +53,12 @@ fn main() {
             context.execute();
 
             let mut pkts_so_far = (0, 0);
-            let mut start = time::precise_time_ns() as f64 / CONVERSION_FACTOR;
+            let mut start = Instant::now();
             let sleep_time = Duration::from_millis(500);
             loop {
                 thread::sleep(sleep_time); // Sleep for a bit
-                let now = time::precise_time_ns() as f64 / CONVERSION_FACTOR;
-                if now - start > 1.0 {
+                let now = Instant::now();
+                if (now - start) > Duration::from_secs(1) {
                     let mut rx = 0;
                     let mut tx = 0;
                     for port in context.ports.values() {
@@ -79,10 +70,10 @@ fn main() {
                     }
                     let pkts = (rx, tx);
                     println!(
-                        "{:.2} OVERALL RX {:.2} TX {:.2}",
+                        "{:?} OVERALL RX {:.2} TX {:.2}",
                         now - start,
-                        (pkts.0 - pkts_so_far.0) as f64 / (now - start),
-                        (pkts.1 - pkts_so_far.1) as f64 / (now - start)
+                        (pkts.0 - pkts_so_far.0) as f64 / (now - start).as_secs_f64(),
+                        (pkts.1 - pkts_so_far.1) as f64 / (now - start).as_secs_f64()
                     );
                     start = now;
                     pkts_so_far = pkts;

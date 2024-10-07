@@ -23,8 +23,6 @@ extern crate lazy_static;
 extern crate libc;
 extern crate net2;
 extern crate regex;
-#[cfg(feature = "sctp")]
-extern crate sctp;
 extern crate twox_hash;
 // TOML for scheduling configuration
 extern crate toml;

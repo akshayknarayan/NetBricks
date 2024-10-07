@@ -29,19 +29,12 @@ impl PacketCreator {
         ip.set_version(4);
         ip.set_ihl(5);
         ip.set_length(20);
-        PacketCreator {
-            mac: mac,
-            ip: ip,
-            producer: producer,
-        }
+        PacketCreator { mac, ip, producer }
     }
 
     #[inline]
     fn initialize_packet(&self, pkt: Packet<NullHeader, EmptyMetadata>) -> Packet<IpHeader, EmptyMetadata> {
-        pkt.push_header(&self.mac)
-            .unwrap()
-            .push_header(&self.ip)
-            .unwrap()
+        pkt.push_header(&self.mac).unwrap().push_header(&self.ip).unwrap()
     }
 
     #[inline]

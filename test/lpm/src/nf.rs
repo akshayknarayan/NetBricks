@@ -16,7 +16,7 @@ pub struct IPLookup {
     raw_entries: Vec<HashMap<u32, u16, FnvHash>>,
 }
 
-const TBL24_SIZE: usize = ((1 << 24) + 1);
+const TBL24_SIZE: usize = (1 << 24) + 1;
 const RAW_SIZE: usize = 33;
 const OVERFLOW_MASK: u16 = 0x8000;
 #[derive(Default, Clone)]
@@ -211,20 +211,21 @@ pub fn lpm<T: 'static + Batch<Header = NullHeader, Metadata = EmptyMetadata>, S:
     lpm_table.construct_table();
     let mut groups = parent
         .parse::<MacHeader>()
-        .transform(box |p| p.get_mut_header().swap_addresses())
+        .transform(Box::new(|p| p.get_mut_header().swap_addresses()))
         .parse::<IpHeader>()
         .group_by(
             3,
-            box move |pkt| {
+            Box::new(move |pkt| {
                 let hdr = pkt.get_header();
                 lpm_table.lookup_entry(hdr.src()) as usize
-            },
+            }),
             s,
         );
     let pipeline = merge(vec![
         groups.get_group(0).unwrap(),
         groups.get_group(1).unwrap(),
         groups.get_group(2).unwrap(),
-    ]).compose();
+    ])
+    .compose();
     pipeline
 }

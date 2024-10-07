@@ -1,5 +1,3 @@
-#![feature(box_syntax)]
-#![feature(asm)]
 extern crate e2d2;
 extern crate fnv;
 extern crate getopts;
@@ -15,7 +13,7 @@ use std::env;
 use std::process;
 use std::sync::Arc;
 use std::thread;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 mod nf;
 
 const CONVERSION_FACTOR: f64 = 1000000000.;
@@ -48,7 +46,7 @@ fn main() {
     let args: Vec<String> = env::args().collect();
     let matches = match opts.parse(&args[1..]) {
         Ok(m) => m,
-        Err(f) => panic!(f.to_string()),
+        Err(f) => panic!("{}", f.to_string()),
     };
     let configuration = read_matches(&matches, &opts);
 
@@ -63,25 +61,22 @@ fn main() {
             context.start_schedulers();
 
             let delay: u64 = delay_arg;
-            context.add_pipeline_to_run(Arc::new(move |p, s: &mut StandaloneScheduler| {
-                test(p, s, delay)
-            }));
+            context.add_pipeline_to_run(Arc::new(move |p, s: &mut StandaloneScheduler| test(p, s, delay)));
             context.execute();
 
             let mut pkts_so_far = (0, 0);
-            let mut last_printed = 0.;
-            const MAX_PRINT_INTERVAL: f64 = 30.;
-            const PRINT_DELAY: f64 = 15.;
-            const RUN_TIME: f64 = 60.;
-            let sleep_delay = (PRINT_DELAY / 2.) as u64;
-            let mut start = time::precise_time_ns() as f64 / CONVERSION_FACTOR;
+            let mut last_printed = Instant::now();
+            const MAX_PRINT_INTERVAL: Duration = Duration::from_secs(30);
+            const PRINT_DELAY: Duration = Duration::from_secs(15);
+            const RUN_TIME: Duration = Duration::from_secs(60);
+            let sleep_time = PRINT_DELAY / 2;
+            let mut start = Instant::now();
             let system_boot = start;
-            let sleep_time = Duration::from_millis(sleep_delay);
             println!("0 OVERALL RX 0.00 TX 0.00 CYCLE_PER_DELAY 0 0 0");
             loop {
                 thread::sleep(sleep_time); // Sleep for a bit
-                let now = time::precise_time_ns() as f64 / CONVERSION_FACTOR;
-                if now - start > PRINT_DELAY {
+                let now = Instant::now();
+                if (now - start) > PRINT_DELAY {
                     let mut rx = 0;
                     let mut tx = 0;
                     for port in context.ports.values() {
@@ -93,18 +88,18 @@ fn main() {
                     }
                     let pkts = (rx, tx);
                     let rx_pkts = pkts.0 - pkts_so_far.0;
-                    if rx_pkts > 0 || now - last_printed > MAX_PRINT_INTERVAL {
+                    if rx_pkts > 0 || (now - last_printed) > MAX_PRINT_INTERVAL {
                         println!(
-                            "{:.2} OVERALL RX {:.2} TX {:.2}",
+                            "{:?} OVERALL RX {:.2} TX {:.2}",
                             now - start,
-                            rx_pkts as f64 / (now - start),
-                            (pkts.1 - pkts_so_far.1) as f64 / (now - start)
+                            rx_pkts as f64 / (now - start).as_secs_f64(),
+                            (pkts.1 - pkts_so_far.1) as f64 / (now - start).as_secs_f64()
                         );
                         last_printed = now;
                         start = now;
                         pkts_so_far = pkts;
                     }
-                } else if now - system_boot > RUN_TIME {
+                } else if (now - system_boot) > RUN_TIME {
                     context.stop();
                     break;
                 }

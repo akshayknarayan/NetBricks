@@ -5,7 +5,7 @@ use e2d2::operators::*;
 pub fn tcp_nf<T: 'static + Batch<Header = NullHeader>>(parent: T) -> CompositionBatch {
     parent
         .parse::<MacHeader>()
-        .map(box |pkt| {
+        .map(Box::new(|pkt| {
             println!("hdr {}", pkt.get_header());
             let payload = pkt.get_payload();
             print!("Payload: ");
@@ -13,9 +13,9 @@ pub fn tcp_nf<T: 'static + Batch<Header = NullHeader>>(parent: T) -> Composition
                 print!("{:x} ", p);
             }
             println!("");
-        })
+        }))
         .parse::<IpHeader>()
-        .map(box |pkt| {
+        .map(Box::new(|pkt| {
             let hdr = pkt.get_header();
             let flow = hdr.flow().unwrap();
             let payload = pkt.get_payload();
@@ -26,10 +26,10 @@ pub fn tcp_nf<T: 'static + Batch<Header = NullHeader>>(parent: T) -> Composition
             );
             let (src, dst) = (flow.src_port, flow.dst_port);
             println!("Src {} dst {}", src, dst);
-        })
+        }))
         .parse::<UdpHeader>()
-        .map(box |pkt| {
+        .map(Box::new(|pkt| {
             println!("UDP header {}", pkt.get_header());
-        })
+        }))
         .compose()
 }

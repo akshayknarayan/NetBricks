@@ -1,4 +1,3 @@
-#![feature(box_syntax)]
 extern crate e2d2;
 extern crate getopts;
 extern crate rand;
@@ -6,8 +5,8 @@ extern crate time;
 use e2d2::allocators::*;
 use e2d2::common::*;
 use e2d2::headers::*;
-use e2d2::interface::*;
 use e2d2::interface::dpdk::*;
+use e2d2::interface::*;
 use e2d2::operators::*;
 use e2d2::scheduler::Executable;
 use e2d2::state::*;
@@ -18,6 +17,7 @@ use std::process;
 use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
+use std::time::Instant;
 
 const CONVERSION_FACTOR: f64 = 1000000000.;
 
@@ -27,17 +27,17 @@ fn monitor<T: 'static + Batch<Header = NullHeader, Metadata = EmptyMetadata>>(
 ) -> CompositionBatch {
     parent
         .parse::<MacHeader>()
-        .transform(box |pkt| {
+        .transform(Box::new(|pkt| {
             let hdr = pkt.get_mut_header();
             hdr.swap_addresses();
-        })
+        }))
         .parse::<IpHeader>()
-        .transform(box move |pkt| {
+        .transform(Box::new(move |pkt| {
             let hdr = pkt.get_mut_header();
             let ttl = hdr.ttl();
             hdr.set_ttl(ttl + 1);
             monitoring_cache.update(hdr.flow().unwrap(), 1);
-        })
+        }))
         .compose()
 }
 
@@ -73,7 +73,7 @@ fn main() {
     opts.optopt("m", "master", "Master core", "master");
     let matches = match opts.parse(&args[1..]) {
         Ok(m) => m,
-        Err(f) => panic!(f.to_string()),
+        Err(f) => panic!("{}", f.to_string()),
     };
     if matches.opt_present("h") {
         print!("{}", opts.usage(&format!("Usage: {} [options]", program)));
@@ -91,20 +91,13 @@ fn main() {
 
     let cores: Vec<i32> = cores_str
         .iter()
-        .map(|n: &String| {
-            n.parse()
-                .ok()
-                .expect(&format!("Core cannot be parsed {}", n))
-        })
+        .map(|n: &String| n.parse().ok().expect(&format!("Core cannot be parsed {}", n)))
         .collect();
 
     fn extract_cores_for_port(ports: &[String], cores: &[i32]) -> HashMap<String, Vec<i32>> {
         let mut cores_for_port = HashMap::<String, Vec<i32>>::new();
         for (port, core) in ports.iter().zip(cores.iter()) {
-            cores_for_port
-                .entry(port.clone())
-                .or_insert(vec![])
-                .push(*core)
+            cores_for_port.entry(port.clone()).or_insert(vec![]).push(*core)
         }
         cores_for_port
     }
@@ -151,13 +144,13 @@ fn main() {
         })
         .collect();
     let mut pkts_so_far = (0, 0);
-    let mut start = time::precise_time_ns() as f64 / CONVERSION_FACTOR;
+    let mut start = Instant::now();
     let sleep_time = Duration::from_millis(500);
     loop {
         thread::sleep(sleep_time); // Sleep for a bit
         consumer.sync();
-        let now = time::precise_time_ns() as f64 / CONVERSION_FACTOR;
-        if now - start > 1.0 {
+        let now = Instant::now();
+        if (now - start) > Duration::from_secs(1) {
             let mut rx = 0;
             let mut tx = 0;
             for port in &ports {
@@ -169,10 +162,10 @@ fn main() {
             }
             let pkts = (rx, tx);
             println!(
-                "{:.2} OVERALL RX {:.2} TX {:.2} FLOWS {}",
+                "{:?} OVERALL RX {:.2} TX {:.2} FLOWS {}",
                 now - start,
-                (pkts.0 - pkts_so_far.0) as f64 / (now - start),
-                (pkts.1 - pkts_so_far.1) as f64 / (now - start),
+                (pkts.0 - pkts_so_far.0) as f64 / (now - start).as_secs_f64(),
+                (pkts.1 - pkts_so_far.1) as f64 / (now - start).as_secs_f64(),
                 consumer.len()
             );
             start = now;
