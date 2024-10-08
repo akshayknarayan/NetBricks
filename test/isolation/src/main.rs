@@ -2,7 +2,7 @@
 //!
 //! # Paper's isolation definition
 //!
-//! From the [paper](https://www.usenix.org/system/files/conference/osdi16/osdi16-panda.pdf)
+//! From the [paper](https://www.usenix.org/system/files/conference/osdi16/osdi16-panda.pdf):
 //!
 //! ## Memory Isolation
 //!
@@ -27,8 +27,8 @@
 //!
 //! # Approach
 //!
-//! Memory isolation is not interesting to break via `unsafe`. But can we break packet
-//! isolation in safe Rust?
+//! Memory isolation is not interesting to break - we can just do it via `unsafe`. But can we
+//! break packet isolation in safe Rust?
 
 use e2d2::common::*;
 use e2d2::config::{basic_opts, read_matches};
