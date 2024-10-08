@@ -79,6 +79,10 @@ pub fn isotest<T: 'static + Batch<Header = NullHeader, Metadata = EmptyMetadata>
 
             s
         }))
+        .filter(Box::new(move |pkt: &Packet<_, _>| {
+            let m = pkt.read_metadata();
+            m.load(std::sync::atomic::Ordering::Relaxed)
+        }))
         .compose();
     sample_chain(preamble)
 }
