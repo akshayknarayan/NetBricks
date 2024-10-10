@@ -45,6 +45,92 @@ use std::sync::Arc;
 use std::thread;
 use std::time::{Duration, Instant};
 
+mod my_header {
+    use std::{cell::Cell, fmt::Display};
+
+    use e2d2::headers::{EndOffset, IpHeader, MacHeader};
+
+    #[derive(Default)]
+    #[repr(transparent)]
+    pub struct MyIpHeader(pub Cell<IpHeader>);
+
+    unsafe impl Sync for MyIpHeader {}
+
+    impl Display for MyIpHeader {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            let inner = self.0.take();
+            let res = inner.fmt(f);
+            self.0.set(inner);
+            res
+        }
+    }
+
+    impl EndOffset for MyIpHeader {
+        type PreviousHeader = MacHeader;
+        #[inline]
+        fn offset(&self) -> usize {
+            let inner = self.0.take();
+            let res = inner.ihl() as usize * 4;
+            self.0.set(inner);
+            res
+        }
+
+        #[inline]
+        fn size() -> usize {
+            // The struct itself is always 20 bytes.
+            20
+        }
+
+        #[inline]
+        fn payload_size(&self, _: usize) -> usize {
+            let inner = self.0.take();
+            let res = inner.length() as usize - inner.offset();
+            self.0.set(inner);
+            res
+        }
+
+        #[inline]
+        fn check_correct(&self, _prev: &MacHeader) -> bool {
+            true
+        }
+    }
+}
+
+fn bad_nf<T: 'static + Batch<Header = NullHeader, Metadata = EmptyMetadata>>(parent: T) -> CompositionBatch {
+    use my_header::MyIpHeader;
+    use std::sync::Mutex;
+
+    let state: Arc<Mutex<Option<&'static MyIpHeader>>> = Default::default();
+    let pkt_ctr = Arc::new(AtomicUsize::default());
+    parent
+        .parse::<MacHeader>()
+        .parse::<MyIpHeader>()
+        .map(Box::new(|pkt: &Packet<MyIpHeader, _>| {
+            let ctr = pkt_ctr.clone();
+            let s = Arc::clone(&state);
+
+            let h = pkt.get_header();
+            let cnt = ctr.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+            if cnt == 1 {
+                *s.lock().unwrap() = Some(h);
+            } else if cnt > 10 {
+                ctr.store(0, std::sync::atomic::Ordering::Relaxed);
+            }
+        }))
+        .compose()
+}
+
+fn victim_nf<T: 'static + Batch<Header = NullHeader, Metadata = EmptyMetadata>>(parent: T) -> CompositionBatch {
+    parent
+        .parse::<MacHeader>()
+        .parse::<IpHeader>()
+        .filter(Box::new(|pkt: &Packet<IpHeader, _>| {
+            let h = pkt.get_header();
+            true
+        }))
+        .compose()
+}
+
 #[inline]
 pub fn isotest<T: 'static + Batch<Header = NullHeader, Metadata = EmptyMetadata>>(parent: T) -> CompositionBatch {
     let state = Arc::new(AtomicBool::default());
