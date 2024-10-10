@@ -27,8 +27,9 @@
 //!
 //! # Approach
 //!
-//! Memory isolation is not interesting to break - we can just do it via `unsafe`. But can we
-//! break packet isolation in safe Rust?
+//! Memory isolation is not interesting to break - we can just do it via `unsafe`. And NetBricks is
+//! intended to be used with deny(unsafe) inside NF code. But can we break packet isolation in safe
+//! Rust?
 
 use e2d2::common::*;
 use e2d2::config::{basic_opts, read_matches};
@@ -39,43 +40,22 @@ use e2d2::scheduler::*;
 use std::env;
 use std::fmt::Display;
 use std::process;
-use std::sync::atomic::AtomicBool;
+use std::sync::atomic::{AtomicBool, AtomicUsize};
 use std::sync::Arc;
 use std::thread;
 use std::time::{Duration, Instant};
 
 #[inline]
-pub fn sample_chain<T: 'static + Batch<Header = NullHeader, Metadata = EmptyMetadata>>(parent: T) -> CompositionBatch {
-    parent
-        .parse::<MacHeader>()
-        .transform(Box::new(move |pkt| {
-            let hdr = pkt.get_mut_header();
-            hdr.swap_addresses();
-        }))
-        .parse::<IpHeader>()
-        .transform(Box::new(|pkt| {
-            let h = pkt.get_mut_header();
-            let ttl = h.ttl();
-            h.set_ttl(ttl - 1);
-        }))
-        .filter(Box::new(|pkt| {
-            let h = pkt.get_header();
-            h.ttl() != 0
-        }))
-        .compose()
-}
-
-#[inline]
 pub fn isotest<T: 'static + Batch<Header = NullHeader, Metadata = EmptyMetadata>>(parent: T) -> CompositionBatch {
     let state = Arc::new(AtomicBool::default());
-    let preamble = parent
+    let pkt_ctr = Arc::new(AtomicUsize::default());
+    parent
         .metadata(Box::new(move |_pkt| {
             let s = state.clone();
-            let s2 = state.clone();
-            std::thread::spawn(move || {
-                thread::sleep(Duration::from_millis(5));
-                s2.store(false, std::sync::atomic::Ordering::Relaxed);
-            });
+            let ctr = pkt_ctr.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+            if ctr > 10 {
+                s.store(true, std::sync::atomic::Ordering::Relaxed);
+            }
 
             s
         }))
@@ -83,8 +63,7 @@ pub fn isotest<T: 'static + Batch<Header = NullHeader, Metadata = EmptyMetadata>
             let m = pkt.read_metadata();
             m.load(std::sync::atomic::Ordering::Relaxed)
         }))
-        .compose();
-    sample_chain(preamble)
+        .compose()
 }
 
 fn test<T, S>(ports: Vec<T>, sched: &mut S)
