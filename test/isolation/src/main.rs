@@ -40,28 +40,17 @@ use e2d2::scheduler::*;
 use std::env;
 use std::fmt::Display;
 use std::process;
-use std::sync::atomic::{AtomicBool, AtomicUsize};
 use std::sync::Arc;
 use std::thread;
 use std::time::{Duration, Instant};
 
 #[inline]
 pub fn isotest<T: 'static + Batch<Header = NullHeader, Metadata = EmptyMetadata>>(parent: T) -> CompositionBatch {
-    let state = Arc::new(AtomicBool::default());
-    let pkt_ctr = Arc::new(AtomicUsize::default());
     parent
-        .metadata(Box::new(move |_pkt| {
-            let s = state.clone();
-            let ctr = pkt_ctr.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-            if ctr > 10 {
-                s.store(true, std::sync::atomic::Ordering::Relaxed);
-            }
-
-            s
-        }))
+        .metadata(Box::new(move |_pkt| Box::new(false)))
         .filter(Box::new(move |pkt: &Packet<_, _>| {
             let m = pkt.read_metadata();
-            m.load(std::sync::atomic::Ordering::Relaxed)
+            **m
         }))
         .compose()
 }
